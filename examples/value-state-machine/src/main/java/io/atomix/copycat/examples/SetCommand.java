@@ -22,23 +22,25 @@ import io.atomix.copycat.Command;
  *
  * @author <a href="http://github.com/kuujo>Jordan Halterman</a>
  */
-public class SetCommand implements Command<Object> {
-  private final Object value;
+public class SetCommand implements Command<Long> {
+    private final Long value;
 
-  public SetCommand(Object value) {
-    this.value = value;
-  }
+    public SetCommand(Long value) {
+        this.value = value;
+    }
 
-  /**
-   * Returns the value.
-   */
-  public Object value() {
-    return value;
-  }
+    /**
+     * Returns the value.
+     */
+    public Long value() {
+        return value;
+    }
 
-  @Override
-  public CompactionMode compaction() {
-    return CompactionMode.QUORUM;
-  }
+    @Override public CompactionMode compaction() {
+        return CompactionMode.SNAPSHOT;
+    }
 
+    @Override public String toString() {
+        return value.toString();
+    }
 }

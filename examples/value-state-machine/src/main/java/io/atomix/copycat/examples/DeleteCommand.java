@@ -23,8 +23,24 @@ import io.atomix.copycat.Command;
  * @author <a href="http://github.com/kuujo>Jordan Halterman</a>
  */
 public class DeleteCommand implements Command<Void> {
-  @Override
-  public CompactionMode compaction() {
-    return CompactionMode.TOMBSTONE;
-  }
+    private final Long value;
+
+    public DeleteCommand(Long value) {
+        this.value = value;
+    }
+
+    /**
+     * Returns the value.
+     */
+    public Long value() {
+        return value;
+    }
+
+    @Override public CompactionMode compaction() {
+        return CompactionMode.QUORUM;
+    }
+
+    @Override public String toString() {
+        return value.toString();
+    }
 }

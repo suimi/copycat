@@ -21,7 +21,10 @@
     </encoder>
   </appender>
 
-  <logger name="io.atomix.catalyst" level="WARN" />
+  <logger name="io.atomix.copycat.server.state.ServerStateMachine" level="debug" />
+  <logger name="io.atomix.copycat.server.state.ServerSessionContext" level="debug" />
+  <logger name="io.atomix.catalyst" level="info" />
+  <logger name="io.atomix.copycat" level="info" />
 
   <root level="INFO">
     <appender-ref ref="STDOUT" />

@@ -19,6 +19,7 @@ import io.atomix.catalyst.transport.Address;
 import io.atomix.catalyst.transport.netty.NettyTransport;
 import io.atomix.copycat.server.CopycatServer;
 import io.atomix.copycat.server.storage.Storage;
+import io.atomix.copycat.server.storage.StorageLevel;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ import java.util.List;
 
 /**
  * Value state machine example. Expects at least 2 arguments:
- * 
+ *
  * <ul>
  * <li>path - the sub-directory to store log files in</li>
  * <li>host:port pairs - the host address and port of cluster members</li>
@@ -59,9 +60,10 @@ public class ValueStateMachineExample {
     CopycatServer server = CopycatServer.builder(address)
       .withStateMachine(ValueStateMachine::new)
       .withTransport(new NettyTransport())
-      .withStorage(Storage.builder()
+      .withStorage(Storage.builder().withStorageLevel(StorageLevel.DISK)
         .withDirectory(args[0])
         .withMaxSegmentSize(1024 * 1024 * 32)
+          .withMaxEntriesPerSegment(100)
         .withMinorCompactionInterval(Duration.ofMinutes(1))
         .withMajorCompactionInterval(Duration.ofMinutes(15))
         .build())

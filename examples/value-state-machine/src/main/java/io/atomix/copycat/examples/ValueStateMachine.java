@@ -16,66 +16,96 @@
 package io.atomix.copycat.examples;
 
 import io.atomix.copycat.server.Commit;
+import io.atomix.copycat.server.Snapshottable;
 import io.atomix.copycat.server.StateMachine;
 import io.atomix.copycat.server.StateMachineExecutor;
+import io.atomix.copycat.server.storage.snapshot.SnapshotReader;
+import io.atomix.copycat.server.storage.snapshot.SnapshotWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Random;
 
 /**
  * Value state machine.
  *
  * @author <a href="http://github.com/kuujo>Jordan Halterman</a>
  */
-public class ValueStateMachine extends StateMachine {
-  private Commit<SetCommand> value;
+public class ValueStateMachine extends StateMachine implements Snapshottable {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ValueStateMachine.class);
 
-  @Override
-  protected void configure(StateMachineExecutor executor) {
-    executor.register(SetCommand.class, this::set);
-    executor.register(GetQuery.class, this::get);
-    executor.register(DeleteCommand.class, this::delete);
-  }
+    private Long index = 0L;
 
-  /**
-   * Sets the value.
-   */
-  private Object set(Commit<SetCommand> commit) {
-    try {
-      Commit<SetCommand> previous = value;
-      value = commit;
-      if (previous != null) {
-        Object result = previous.operation().value();
-        previous.close();
-        return result;
-      }
-      return null;
-    } catch (Exception e) {
-      commit.close();
-      throw e;
+    @Override protected void configure(StateMachineExecutor executor) {
+        executor.register(SetCommand.class, this::set);
+        executor.register(GetQuery.class, this::get);
+        executor.register(DeleteCommand.class, this::delete);
     }
-  }
 
-  /**
-   * Gets the value.
-   */
-  private Object get(Commit<GetQuery> commit) {
-    try {
-      return value != null ? value.operation().value() : null;
-    } finally {
-      commit.close();
+    /**
+     * Sets the value.
+     */
+    private Long set(Commit<SetCommand> commit) {
+        try {
+            Long result = commit.operation().value();
+            LOGGER.info("set cmd:{}", result);
+//            Random r = new Random();
+//            int i = r.nextInt(10);
+//            if (i % 8 == 0) {
+//                return null;
+//            }
+            if (result != index + 1) {
+                LOGGER.warn("result:{} error,index:{}", result, index);
+                return null;
+            }
+            index = result;
+            commit.close();
+            return result;
+        } catch (Exception e) {
+            LOGGER.error("", e);
+        }
+        return null;
     }
-  }
 
-  /**
-   * Deletes the value.
-   */
-  private void delete(Commit<DeleteCommand> commit) {
-    try {
-      if (value != null) {
-        value.close();
-        value = null;
-      }
-    } finally {
-      commit.close();
+    /**
+     * Gets the value.
+     */
+    private Object get(Commit<GetQuery> commit) {
+        try {
+            return index;
+        } finally {
+            commit.close();
+        }
     }
-  }
 
+    /**
+     * Deletes the value.
+     */
+    private void delete(Commit<DeleteCommand> commit) {
+        try {
+            Long result = commit.operation().value();
+            LOGGER.info("delete cmd:{}", result);
+            commit.close();
+        } catch (Exception e) {
+            commit.close();
+            throw e;
+        }
+    }
+
+    @Override public void snapshot(SnapshotWriter writer) {
+        writer.writeUTF8("" + index).flush();
+    }
+
+    @Override public void install(SnapshotReader reader) {
+        String in = reader.readUTF8();
+        if (in != null && !"".equals(in)) {
+            LOGGER.info("install snapshot:{}", in);
+            index = Long.parseLong(in);
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }
